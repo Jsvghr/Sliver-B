@@ -129,13 +129,17 @@ type SliverHTTPC2 struct {
 	c2Config []*clientpb.HTTPC2Config // C2 configs
 }
 
+// 🎯 MODIFIED: Cloud provider server headers
 func (s *SliverHTTPC2) getServerHeader() string {
 	if serverVersionHeader == "" {
-		switch insecureRand.Intn(2) {
+		// Mimic cloud providers instead of Apache/nginx
+		switch insecureRand.Intn(3) {
 		case 0:
-			serverVersionHeader = fmt.Sprintf("Apache/2.4.%d (Unix)", insecureRand.Intn(48))
-		default:
-			serverVersionHeader = fmt.Sprintf("nginx/1.%d.%d (Ubuntu)", insecureRand.Intn(21), insecureRand.Intn(8))
+			serverVersionHeader = "Microsoft-IIS/10.0"
+		case 1:  
+			serverVersionHeader = "AmazonS3"
+		case 2:
+			serverVersionHeader = "cloudflare"  // CDN provider
 		}
 	}
 	return serverVersionHeader
@@ -211,6 +215,7 @@ func StartHTTPListener(req *clientpb.HTTPListenerReq) (*SliverHTTPC2, error) {
 	return server, nil
 }
 
+// 🎯 MODIFIED: TLS config untuk mimic cloud services
 func getHTTPSConfig(req *clientpb.HTTPListenerReq) *tls.Config {
 	if req.Cert == nil || req.Key == nil {
 		var err error
@@ -235,80 +240,19 @@ func getHTTPSConfig(req *clientpb.HTTPListenerReq) *tls.Config {
 		return tlsConfig
 	}
 
-	// Randomize the JARM fingerprint
-	switch insecureRand.Intn(4) {
+	// Force modern TLS versions only
+	tlsConfig.MinVersion = tls.VersionTLS12
 
-	// So it turns out that Windows by default
-	// disables TLS v1.2 because it's horrible.
-	// So anyways for compatibility we'll specify
-	// a min of 1.1 or 1.0
-
-	case 0:
-		// tlsConfig.MinVersion = tls.VersionTLS13
-		fallthrough // For compatibility with winhttp
-	case 1:
-		// tlsConfig.MinVersion = tls.VersionTLS12
-		fallthrough // For compatibility with winhttp
-	case 2:
-		tlsConfig.MinVersion = tls.VersionTLS11
-	default:
-		tlsConfig.MinVersion = tls.VersionTLS10
-	}
-
-	// Randomize the cipher suites
-	allCipherSuites := []uint16{
-		tls.TLS_RSA_WITH_RC4_128_SHA,                      //uint16 = 0x0005 1
-		tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,                 //uint16 = 0x000a 2
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA,                  //uint16 = 0x002f 3
-		tls.TLS_RSA_WITH_AES_256_CBC_SHA,                  //uint16 = 0x0035 4
-		tls.TLS_RSA_WITH_AES_128_CBC_SHA256,               //uint16 = 0x003c 5
-		tls.TLS_RSA_WITH_AES_128_GCM_SHA256,               //uint16 = 0x009c 6
-		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,               //uint16 = 0x009d 7
-		tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,              //uint16 = 0xc007 8
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,          //uint16 = 0xc009 9
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,          //uint16 = 0xc00a 10
-		tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,                //uint16 = 0xc011 11
-		tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,           //uint16 = 0xc012 12
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,            //uint16 = 0xc013 13
-		tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,            //uint16 = 0xc014 14
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,       //uint16 = 0xc023 15
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,         //uint16 = 0xc027 16
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,         //uint16 = 0xc02f 17
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,       //uint16 = 0xc02b 18
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,         //uint16 = 0xc030 19
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,       //uint16 = 0xc02c 20
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   //uint16 = 0xcca8 21
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, //uint16 = 0xcca9 22
-	}
-	// CipherSuites ignores the order of the ciphers, this random shuffle
-	// is truncated resulting in a random selection from all ciphers
-	insecureRand.Shuffle(len(allCipherSuites), func(i, j int) {
-		allCipherSuites[i], allCipherSuites[j] = allCipherSuites[j], allCipherSuites[i]
-	})
-	nCiphers := insecureRand.Intn(len(allCipherSuites)-8) + 8
-	tlsConfig.CipherSuites = allCipherSuites[:nCiphers]
-
-	// Some TLS 1.2 stacks disable some of the older ciphers like RC4, so to ensure
-	// compatibility we need to make sure we always choose at least one modern RSA
-	// option.
+	// 🎯 MODIFIED: Gunakan cipher suites yang common di cloud services
 	modernCiphers := []uint16{
-		tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,       //uint16 = 0xc027 16
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,       //uint16 = 0xc02f 17
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,       //uint16 = 0xc030 19
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, //uint16 = 0xcca8 21
+		tls.TLS_AES_128_GCM_SHA256,                    // TLS 1.3
+		tls.TLS_AES_256_GCM_SHA384,                    // TLS 1.3  
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,     // Common cloud cipher
+		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,     // Common cloud cipher
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,   // ECDSA variant
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,   // ECDSA variant
 	}
-
-	found := false
-	for _, cipher := range tlsConfig.CipherSuites {
-		if util.Contains(modernCiphers, cipher) {
-			found = true // Our random selection contains a modern cipher, do nothing
-			break
-		}
-	}
-	if !found {
-		// We are lacking at least one modern RSA option, so randomly enable one
-		tlsConfig.CipherSuites = append(tlsConfig.CipherSuites, modernCiphers[insecureRand.Intn(len(modernCiphers))])
-	}
+	tlsConfig.CipherSuites = modernCiphers
 
 	if certs.TLSKeyLogger != nil {
 		tlsConfig.KeyLogWriter = certs.TLSKeyLogger
@@ -427,13 +371,25 @@ func digitsOnly(value string) string {
 	return buf.String()
 }
 
+// 🎯 MODIFIED: Stealth logging - hanya log suspicious requests
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-		accessLog.Infof("%s - %s - %v", getRemoteAddr(req), req.RequestURI, req.Header.Get("User-Agent"))
+		userAgent := req.Header.Get("User-Agent")
+		// Skip logging untuk traffic yang looks legit
+		if !strings.Contains(strings.ToLower(userAgent), "curl") && 
+		   !strings.Contains(strings.ToLower(userAgent), "nmap") &&
+		   !strings.Contains(strings.ToLower(userAgent), "scan") &&
+		   !strings.Contains(strings.ToLower(userAgent), "bot") &&
+		   !strings.Contains(strings.ToLower(userAgent), "spider") {
+			next.ServeHTTP(resp, req)
+			return
+		}
+		accessLog.Infof("%s - %s - %v", getRemoteAddr(req), req.RequestURI, userAgent)
 		next.ServeHTTP(resp, req)
 	})
 }
 
+// 🎯 MODIFIED: Default response headers dengan security headers cloud-like
 // DefaultRespHeaders - Configures default response headers
 func (s *SliverHTTPC2) DefaultRespHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
@@ -441,6 +397,13 @@ func (s *SliverHTTPC2) DefaultRespHeaders(next http.Handler) http.Handler {
 			profile *clientpb.HTTPC2Config
 			err     error
 		)
+
+		// 🎯 TAMBAH: Security headers untuk mimic modern cloud apps
+		resp.Header().Set("X-Content-Type-Options", "nosniff")
+		resp.Header().Set("X-Frame-Options", "DENY") 
+		resp.Header().Set("X-XSS-Protection", "1; mode=block")
+		resp.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		resp.Header().Set("Content-Type", "application/json") // Mimic API responses
 
 		// Check if the requests matches an existing session
 		httpSession := s.getHTTPSession(req)
@@ -732,11 +695,14 @@ func (s *SliverHTTPC2) readReqBody(httpSession *HTTPSession, resp http.ResponseW
 	return plaintext, err
 }
 
+// 🎯 MODIFIED: Longer poll timeouts untuk mimic real applications
 func (s *SliverHTTPC2) getServerPollTimeout() time.Duration {
-	min := s.ServerConf.LongPollTimeout
-	max := s.ServerConf.LongPollTimeout + s.ServerConf.LongPollJitter
+	// Longer timeouts untuk mimic real applications
+	min := int64(30 * time.Second)    // 30 detik minimum
+	max := int64(120 * time.Second)   // 2 menit maximum  
 	timeout := float64(min) + insecureRand.Float64()*(float64(max)-float64(min))
 	pollTimeout := time.Duration(int64(timeout))
+	
 	if pollTimeout < minPollTimeout {
 		httpLog.Warnf("Poll timeout is too short, using default minimum %v", minPollTimeout)
 		pollTimeout = minPollTimeout
